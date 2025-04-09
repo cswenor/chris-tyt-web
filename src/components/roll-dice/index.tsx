@@ -8,9 +8,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { NFT, TokenHolderDisplay } from "@/types"
 import { CopyableAddress } from "@/components/ui/copyable-address"
 import { useData } from '@/providers/data-provider'
-import { fetchVoiName } from '@/lib/utils'
+import { fetchVoiName, algodClient } from '@/lib/utils'
 import { CONFIG } from "@/config"
 import { Button } from "@/components/ui/button"
+import { CONTRACT, abi } from "ulujs";
+import { useWallet } from '@txnlab/use-wallet-react'
 
 interface Winner {
   holder: TokenHolderDisplay
@@ -28,6 +30,7 @@ export function RollDice() {
   const [randomMethod, setRandomMethod] = useState("Exclude Creator")
   const [isRolling, setIsRolling] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const { signTransactions, activeAccount } = useWallet()
 
   const selectWinner = async () => {
     if (!holders || holders.length === 0 || !nfts || nfts.length === 0) return
@@ -108,8 +111,30 @@ export function RollDice() {
     }, 2000)
   }
 
-  const handleTransfer = () => {
-    alert("Up to Shelly :)")
+  // TODO: handler error
+  // TODO: add loading state
+  const handleTransfer = async (winner: Winner) => {
+    const contractId = winner.nft.contractId;
+    const tokenId = Number(winner.nft.tokenId)
+    const from = CONFIG.WALLET_ADDRESS;
+    const to = winner.holder.address;
+    console.log({contractId, tokenId, from, to})
+    const ci = new CONTRACT(contractId, algodClient, undefined, abi.arc72, {
+      addr: from,
+      sk: new Uint8Array()
+    })
+    ci.setPaymentAmount(28500);
+    const arc72TransferFromR: any = await ci.arc72_transferFrom(
+      from,
+      to,
+      tokenId
+    )
+    console.log({arc72TransferFromR})
+    const stxns: any = await signTransactions(arc72TransferFromR.txns.map(
+      (txn: string) => new Uint8Array(Buffer.from(txn, 'base64'))
+    ))
+    const { txid } = await algodClient.sendRawTransaction(stxns).do()
+    console.log({txid})
   }
 
   return (
@@ -199,9 +224,9 @@ export function RollDice() {
                       </div>
                     </div>
 
-                    <Button onClick={handleTransfer} className="mt-4">
+                    {activeAccount?.address === CONFIG.WALLET_ADDRESS ? <Button onClick={() => handleTransfer(winner)} className="mt-4">
                       Transfer to Winner
-                    </Button>
+                    </Button>: null}
                   </div>
                 </div>
               </motion.div>

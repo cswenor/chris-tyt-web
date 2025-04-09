@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Modal } from "./modal"
 import { useWallet } from '@txnlab/use-wallet-react'
-import { fetchVoiName, formatAddress, getVoiBalance } from '@/lib/utils'
+import { fetchVoiName, formatAddress, getVoiBalance, algodClient } from '@/lib/utils'
+import { CONTRACT, abi } from "ulujs";
+import { CONFIG } from '@/config'
 
 export function AppBar() {
   const { wallets, activeAccount } = useWallet()
@@ -18,7 +20,16 @@ export function AppBar() {
       if (activeAccount?.address) {
         const name = await fetchVoiName(activeAccount.address)
         setVoiName(name)
-        const balance = await getVoiBalance(activeAccount.address)
+        // get arc200 balance
+        const ci = new CONTRACT(CONFIG.TOKEN_ID, algodClient, undefined, abi.arc200, {
+          addr: activeAccount.address,
+          sk: new Uint8Array()
+        })
+        const balanceR = await ci.arc200_balanceOf(activeAccount.address)
+        let balance = 0;
+        if(balanceR.success) {
+          balance = Number(balanceR.returnValue) / 10 ** 6; // TODO use BigNumber
+        }
         setCtytBalance(balance)
       }
     }

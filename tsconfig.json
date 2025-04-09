@@ -5,6 +5,7 @@
       "lib": ["dom", "dom.iterable", "esnext"],
       "allowJs": true,
       "skipLibCheck": true,
+      "skipDefaultLibCheck": true,
       "strict": true,
       "noEmit": true,
       "esModuleInterop": true,
@@ -22,7 +23,11 @@
       "paths": {
         "@/*": ["./src/*"]
       },
-      "types": ["node"]
+      "types": ["node"],
+      "typeRoots": [
+        "./node_modules/@types",
+        "./node_modules/@algorandfoundation"
+      ]
     },
     "include": [
       "next-env.d.ts",

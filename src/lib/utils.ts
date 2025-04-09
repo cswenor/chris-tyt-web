@@ -20,7 +20,7 @@ export function formatNumber(num: number): string {
   }).format(num)
 }
 
-const algodClient = new algosdk.Algodv2(
+export const algodClient = new algosdk.Algodv2(
   '',
   CONFIG.APIS.VOI_NODE,
   ''
