@@ -8,8 +8,7 @@
         "build": "next build",
         "start": "next start",
         "lint": "next lint",
-        "type-check": "tsc",
-        "preinstall": "npm config set canvas:binary-host-mirror=https://github.com/Automattic/node-canvas/releases/download/"
+        "type-check": "tsc"
     },
     "dependencies": {
         "@agoralabs-sh/avm-web-provider": "^1.7.0",
