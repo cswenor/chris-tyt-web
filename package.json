@@ -41,6 +41,7 @@
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
         "rimraf": "^6.0.1",
+        "sharp": "^0.34.1",
         "stream-browserify": "^3.0.0",
         "tailwind-merge": "^3.2.0",
         "ulujs": "^0.12.7"
@@ -63,6 +64,7 @@
         "crypto": false
     },
     "engines": {
-        "node": "18.x"
+        "node": ">=20.9.0",
+        "npm": ">=10.2.0"
     }
 }
