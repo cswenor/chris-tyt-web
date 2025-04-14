@@ -33,7 +33,8 @@ export function useTokenHolders() {
         if(balance.accountId in resolvedNames) {
           continue;
         }
-        const name = await resolver.http.getNameFromAddress(balance.accountId);
+        const nameResult = await resolver.http.getNameFromAddress(balance.accountId);
+        const name = Array.isArray(nameResult) ? nameResult[0] : nameResult;
         resolvedNames[balance.accountId] = name;
       }
 

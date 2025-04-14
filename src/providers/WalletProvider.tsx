@@ -14,7 +14,7 @@ const manager = new WalletManager({
     {
       id: WalletId.LUTE,
       options: {
-        siteName: 'Your Site Name', 
+        siteName: 'Your Site Name',
       },
       metadata: {
         name: 'LUTE',
@@ -24,7 +24,7 @@ const manager = new WalletManager({
     {
       id: WalletId.BIATEC,
       options: {
-        projectId: 'your-biatec-project-id', 
+        projectId: 'your-biatec-project-id',
       },
       metadata: {
         name: 'BIATEC',
@@ -34,12 +34,13 @@ const manager = new WalletManager({
     {
       id: WalletId.WALLETCONNECT,
       options: {
-        projectId: 'your-walletconnect-project-id', 
+        projectId: 'your-walletconnect-project-id', // Replace with your WalletConnect v2 project ID
+        relayUrl: 'wss://relay.walletconnect.com', // WalletConnect v2 relay URL
         metadata: {
           name: 'WALLET CONNECT',
           description: 'Connect with any WalletConnect-compatible wallet',
-          url: 'https://yourwebsite.com', 
-          icons: ['../../public/images/chris-tyt.png'], 
+          url: 'https://yourwebsite.com',
+          icons: ['../../public/images/chris-tyt.png'],
         },
       },
     },
@@ -47,9 +48,9 @@ const manager = new WalletManager({
   networks: {
     [NetworkId.MAINNET]: {
       algod: {
-        baseServer: 'https://mainnet-api.voi.nodely.dev', 
-        port: '', 
-        token: '', 
+        baseServer: 'https://mainnet-api.voi.nodely.dev',
+        port: '',
+        token: '',
       },
     },
     [NetworkId.TESTNET]: {

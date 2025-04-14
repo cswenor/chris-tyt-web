@@ -114,27 +114,27 @@ export function RollDice() {
   // TODO: handler error
   // TODO: add loading state
   const handleTransfer = async (winner: Winner) => {
-    const contractId = winner.nft.contractId;
+    const contractId = winner.nft.contractId
     const tokenId = Number(winner.nft.tokenId)
-    const from = CONFIG.WALLET_ADDRESS;
-    const to = winner.holder.address;
-    console.log({contractId, tokenId, from, to})
+    const from = CONFIG.WALLET_ADDRESS
+    const to = winner.holder.address
+    console.log({ contractId, tokenId, from, to })
+  
     const ci = new CONTRACT(contractId, algodClient, undefined, abi.arc72, {
       addr: from,
-      sk: new Uint8Array()
+      sk: new Uint8Array(),
     })
-    ci.setPaymentAmount(28500);
-    const arc72TransferFromR: any = await ci.arc72_transferFrom(
-      from,
-      to,
-      tokenId
+    ci.setPaymentAmount(28500)
+  
+    const arc72TransferFromR: any = await ci.arc72_transferFrom(from, to, tokenId)
+    console.log({ arc72TransferFromR })
+  
+    // Sign transactions using WalletConnect v2
+    const stxns: any = await signTransactions(
+      arc72TransferFromR.txns.map((txn: string) => new Uint8Array(Buffer.from(txn, 'base64')))
     )
-    console.log({arc72TransferFromR})
-    const stxns: any = await signTransactions(arc72TransferFromR.txns.map(
-      (txn: string) => new Uint8Array(Buffer.from(txn, 'base64'))
-    ))
     const { txid } = await algodClient.sendRawTransaction(stxns).do()
-    console.log({txid})
+    console.log({ txid })
   }
 
   return (
