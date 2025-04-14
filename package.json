@@ -8,7 +8,8 @@
         "build": "next build",
         "start": "next start",
         "lint": "next lint",
-        "type-check": "tsc"
+        "type-check": "tsc",
+        "preinstall": "npm config set canvas:binary-host-mirror=https://github.com/Automattic/node-canvas/releases/download/"
     },
     "dependencies": {
         "@agoralabs-sh/avm-web-provider": "^1.7.0",
@@ -28,6 +29,7 @@
         "@walletconnect/types": "^2.19.2",
         "@xarmian/envoi-sdk": "^0.2.1",
         "algosdk": "^3.2.0",
+        "canvas": "^3.1.0",
         "class-variance-authority": "^0.7.0",
         "clsx": "^2.1.1",
         "crypto-browserify": "^3.12.1",
