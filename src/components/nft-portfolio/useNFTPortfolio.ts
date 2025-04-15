@@ -15,7 +15,7 @@ export function useNFTPortfolio() {
   const fetchNFTs = useCallback(async () => {
     try {
       const response = await fetch(
-        `${CONFIG.APIS.NAUTILUS_INDEXER}/tokens?owner=${CONFIG.WALLET_ADDRESS}&include=all`
+        `${CONFIG.APIS.MIMIR_INDEXER}/nft-indexer/v1/tokens?owner=${CONFIG.WALLET_ADDRESS}&limit=1000`
       );
 
       if (!response.ok) {
@@ -65,7 +65,7 @@ export function useNFTPortfolio() {
     }, {})
 
     return Object.values(grouped).sort((a, b) => 
-      a.collectionName.localeCompare(b.collectionName)
+      a.collectionName?.localeCompare(b.collectionName)
     )
   }, [nfts])
 

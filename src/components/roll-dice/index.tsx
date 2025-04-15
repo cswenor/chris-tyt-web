@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dice6, Trophy } from "lucide-react"
@@ -8,6 +8,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { NFT, TokenHolderDisplay } from "@/types"
 import { CopyableAddress } from "@/components/ui/copyable-address"
 import { useData } from '@/providers/data-provider'
+import algosdk from 'algosdk'
+import { CONFIG } from '@/config'
+import { useNetwork, useWallet } from '@txnlab/use-wallet-react'
 
 interface Winner {
   holder: TokenHolderDisplay
@@ -19,26 +22,34 @@ interface Winner {
 }
 
 export function RollDice() {
+  const { activeAccount, signTransactions, algodClient } = useWallet();
+  const { activeNetwork } = useNetwork();
   const { holders, nfts, loading } = useData()
   const [winner, setWinner] = useState<Winner | null>(null)
   const [isRolling, setIsRolling] = useState(false)
+  const [isTransferring, setIsTransferring] = useState(false)
 
   const selectWinner = () => {
     if (holders.length === 0 || nfts.length === 0) return
     
     setIsRolling(true)
     
+    // Filter out excluded addresses using type assertion to handle string array
+    const eligibleHolders = holders.filter(holder => 
+      !(CONFIG.EXCLUDED_ADDRESSES as unknown as string[]).includes(holder.address as string)
+    )
+    
     // Calculate total tokens for weighting
-    const totalTokens = holders.reduce((sum, holder) => sum + holder.balance, 0)
+    const totalTokens = eligibleHolders.reduce((sum, holder) => sum + holder.balance, 0)
     
     // Generate random number between 0 and total tokens
     const randomPoint = Math.random() * totalTokens
     
     // Find the winner based on weighted probability
     let accumulator = 0
-    let selectedHolder = holders[0]
+    let selectedHolder = eligibleHolders[0]
     
-    for (const holder of holders) {
+    for (const holder of eligibleHolders) {
       accumulator += holder.balance
       if (randomPoint <= accumulator) {
         selectedHolder = holder
@@ -46,8 +57,9 @@ export function RollDice() {
       }
     }
 
-    // Select random NFT and parse metadata
-    const randomNFT = nfts[Math.floor(Math.random() * nfts.length)]
+    // Filter out 'en.Voi' NFTs and select random NFT from remaining ones
+    const eligibleNFTs = nfts.filter(nft => nft.collectionName !== 'en.Voi')
+    const randomNFT = eligibleNFTs[Math.floor(Math.random() * eligibleNFTs.length)]
     const metadata = JSON.parse(randomNFT.metadata)
 
     // Simulate dice roll animation timing
@@ -62,6 +74,112 @@ export function RollDice() {
       })
       setIsRolling(false)
     }, 2000)
+  }
+
+  // TODO replace with new version of ulujs compatile with algosdk v3
+  const handleTransfer = async () => {
+    if (!activeAccount) {
+      alert('Please connect your wallet')
+      return
+    }
+    if (!winner) {
+      alert('No winner selected')
+      return
+    }
+    if(activeNetwork !== 'voi-mainnet') {
+      alert('This feature is only available on the Voi Mainnet')
+      return
+    }
+    setIsTransferring(true)
+    try {
+
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      const method = algosdk.ABIMethod.fromSignature("arc72_transferFrom(address,address,uint256)void")
+
+      const args = [
+        CONFIG.WALLET_ADDRESS,
+        winner.holder.address,
+        BigInt(winner.nft.tokenId)
+      ]
+
+      const encodedArgs = args.map((arg, index) => {
+        return (method.args[index].type as any).encode(arg); 
+      });
+
+      const vtxns = []
+
+      const boxCost = 28500;
+      const txnCount = 1; // REM leave as 1 for now could be used for future use case to send multiple NFTs
+
+      for(let i = 0; i < txnCount; i++) {
+
+        const txns = []
+
+        const accInfo = await algodClient.accountInformation(algosdk.getApplicationAddress(winner.nft.contractId)).do();
+        const { amount: balance, minBalance } = accInfo;
+        const availableBalance = balance - minBalance;
+        const totalBoxCost = txnCount * boxCost;
+
+        // REM ensure the box cost is covered
+        if(availableBalance > totalBoxCost) {
+          txns.push(
+            algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+              sender: activeAccount?.address,
+            receiver: algosdk.getApplicationAddress(winner.nft.contractId),
+            amount: boxCost,
+            note: new TextEncoder().encode(`Transfer NFT ${i}`),
+            suggestedParams
+          })
+        )
+      }
+
+      txns.push(algosdk.makeApplicationCallTxnFromObject({
+        sender: activeAccount?.address,
+        appIndex: winner.nft.contractId,
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+        appArgs: [
+         method.getSelector(),
+         ...encodedArgs
+        ],
+        suggestedParams
+      }))
+
+      const txgroup = algosdk.assignGroupID(txns);
+
+      const request = new algosdk.modelsv2.SimulateRequest({
+        txnGroups: [
+          new algosdk.modelsv2.SimulateRequestTransactionGroup({
+             txns: txgroup.map((value, index) => {
+              return algosdk.decodeSignedTransaction(algosdk.encodeUnsignedSimulateTransaction(value))
+            })
+           }),
+         ],
+         allowEmptySignatures: true,
+         allowUnnamedResources: true,
+         fixSigners: true // REM new 
+       });
+
+       const resp = await algodClient.simulateTransactions(request).do();
+
+       // TODO check if the transaction is successful
+
+       const utxns = txns.map(t => Buffer.from(algosdk.encodeUnsignedTransaction(t)).toString("base64"))
+
+       vtxns.push(utxns)
+      }
+
+       const stxns = await signTransactions(vtxns.map(v =>v.map(u => new Uint8Array(Buffer.from(u, 'base64')))))
+
+       const res = await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
+
+       console.log({ res })
+
+    } catch (error) {
+      console.error('Transfer failed:', error)
+    } finally {
+      setIsTransferring(false)
+    }
   }
 
   if (loading || holders.length === 0 || nfts.length === 0) {
@@ -156,6 +274,30 @@ export function RollDice() {
                       </div>
                     </div>
                   </div>
+                  {activeAccount?.address === CONFIG.WALLET_ADDRESS && (
+                    <div className="mt-6">
+                      <Button
+                        onClick={handleTransfer}
+                        disabled={isTransferring}
+                        variant="secondary"
+                    >
+                      {isTransferring ? (
+                        <>
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            className="mr-2"
+                          >
+                            <Dice6 className="h-4 w-4" />
+                          </motion.div>
+                          Transferring...
+                        </>
+                      ) : (
+                        'Transfer NFT'
+                      )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
