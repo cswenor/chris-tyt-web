@@ -31,10 +31,20 @@ export function TokenDetails() {
               <p className="font-medium text-sm text-muted-foreground">
                 Token ID
               </p>
-              <CopyableAddress
-                address={CONFIG.TOKEN_ID.toString()}
-                variant="numeric"
-              />
+              <div className="flex items-center gap-2">
+                <CopyableAddress
+                  address={CONFIG.TOKEN_ID.toString()}
+                  variant="numeric"
+                />
+                <a
+                  href={`https://voiager.xyz/token/${CONFIG.TOKEN_ID}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline text-sm"
+                >
+                  View on Voiager ↗
+                </a>
+              </div>
             </div>
             <div className="space-y-1">
               <p className="font-medium text-sm text-muted-foreground">
